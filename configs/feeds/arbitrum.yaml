@@ -1,0 +1,67 @@
+# Verified Chainlink Data Feed proxies on arbitrum (chain id 42161).
+#
+# Source page:  https://docs.chain.link/data-feeds/price-feeds/addresses?network=arbitrum&page=1
+# Data file:    https://reference-data-directory.vercel.app/feeds-ethereum-mainnet-arbitrum-1.json
+#               (the JSON file the official addresses page loads; retrieved 2026-10-22)
+# Sequencer:    https://docs.chain.link/data-feeds/l2-sequencer-feeds (matches the data file)
+#
+# On-chain verification: 2026-10-22, pinned block 517104692 (2026-10-22T03:08:27Z), read through
+# two independent RPC endpoints at the same block; both returned identical results.
+# description(), decimals(), version() and aggregator() were checked against the
+# data file. heartbeat/deviation_threshold are copied from the data file and are NOT
+# verifiable on-chain; they are off-chain operating parameters.
+# See docs/research.md#4-on-chain-verification. Never edit addresses by hand.
+network: arbitrum
+chain_id: 42161
+sequencer_uptime_feed:
+  proxy: "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"
+  description: "L2 Sequencer Uptime Status Feed"
+  decimals: 0
+  verified_aggregator_type: "ArbitrumSequencerUptimeFeed 1.0.0"
+  verified_block: 517104872
+feeds:
+  - name: ETH/USD
+    proxy: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612"
+    description: "ETH / USD"
+    decimals: 8
+    heartbeat: 1755s
+    deviation_threshold: 0.05%
+    market_risk: low
+    docs_path: eth-usd
+    verified:
+      aggregator: "0xD827123D014578C965F6c9d87A641ec05FaA5501"
+      aggregator_type: "AccessControlledOCR2Aggregator 1.0.0"
+      version: 6
+      phase_id: 2
+      min_answer: "1"
+      max_answer: "95780971304118053647396689196894323976171195136475135"
+  - name: BTC/USD
+    proxy: "0x6ce185860a4963106506C203335A2910413708e9"
+    description: "BTC / USD"
+    decimals: 8
+    heartbeat: 1755s
+    deviation_threshold: 0.05%
+    market_risk: low
+    docs_path: btc-usd
+    verified:
+      aggregator: "0xA8c2ad8Fc02733d758C0585478cdf6C53d6c9cB8"
+      aggregator_type: "AccessControlledOCR2Aggregator 1.0.0"
+      version: 6
+      phase_id: 2
+      min_answer: "1"
+      max_answer: "95780971304118053647396689196894323976171195136475135"
+  - name: USDC/USD
+    proxy: "0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3"
+    description: "USDC / USD"
+    decimals: 8
+    heartbeat: 255s
+    deviation_threshold: 0.1%
+    market_risk: low
+    docs_path: usdc-usd
+    verified:
+      aggregator: "0xb10cb22245D54f58C66eE65353FaB5D94ca21A1C"
+      aggregator_type: "AccessControlledOCR2Aggregator 1.0.0"
+      version: 6
+      phase_id: 3
+      min_answer: "1"
+      max_answer: "105000000"
