@@ -145,8 +145,9 @@ func (s Secret) MarshalYAML() (any, error) { return s.raw, nil }
 // errUndefinedVar is returned when a ${VAR} reference has no value.
 var errUndefinedVar = errors.New("environment variable is not set")
 
-// expand resolves ${NAME} references in raw. Any other use of "$" is an error,
-// so that a literal "$" in a token is never half-expanded by accident.
+// expand resolves ${NAME} references in raw. "$$" is a literal "$" (for
+// secrets that contain one). Any other use of "$" is an error, so that a
+// literal "$" is never half-expanded by accident.
 func expand(raw string, lookup func(string) (string, bool)) (string, error) {
 	var b strings.Builder
 	for i := 0; i < len(raw); i++ {
@@ -155,8 +156,13 @@ func expand(raw string, lookup func(string) (string, bool)) (string, error) {
 			b.WriteByte(c)
 			continue
 		}
+		if i+1 < len(raw) && raw[i+1] == '$' {
+			b.WriteByte('$')
+			i++
+			continue
+		}
 		if i+1 >= len(raw) || raw[i+1] != '{' {
-			return "", errors.New(`"$" must start a ${NAME} reference`)
+			return "", errors.New(`"$" must start a ${NAME} reference (write "$$" for a literal "$")`)
 		}
 		end := strings.IndexByte(raw[i+2:], '}')
 		if end < 0 {

@@ -342,6 +342,8 @@ func TestExpand(t *testing.T) {
 		{"${a}", "", true},
 		{"${1A}", "", true},
 		{"tail$", "", true},
+		{"pa$$word", "pa$word", false},
+		{"$${A}", "${A}", false},
 	}
 	for _, tt := range tests {
 		got, err := expand(tt.in, lookup)
