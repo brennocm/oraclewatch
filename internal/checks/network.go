@@ -66,10 +66,12 @@ func (c ChainHead) Evaluate(in *NetworkInput) Result {
 	}
 	details := map[string]string{"max_head_lag": in.MaxHeadLag.String()}
 	var lagging []string
+	answered := 0
 	for _, h := range in.Snapshot.Heads {
 		if h.Err != nil {
 			continue
 		}
+		answered++
 		lag := in.Now.Sub(h.Time).Truncate(time.Second)
 		details[h.Endpoint] = "head " + strconv.FormatUint(h.Number, 10) + ", " + lag.String() + " old"
 		if h.Lagging {
@@ -78,6 +80,10 @@ func (c ChainHead) Evaluate(in *NetworkInput) Result {
 	}
 	sort.Strings(lagging)
 	switch {
+	case answered == 0:
+		// No head at all says nothing about the chain; FW-SELF-001 reports
+		// the blindness.
+		return in.result(c.ID(), Unknown, "no endpoint returned its head", details)
 	case errors.Is(in.SnapshotErr, chain.ErrChainStalled):
 		return in.result(c.ID(), Critical, "every endpoint reports a head older than "+in.MaxHeadLag.String()+": chain halted or all providers stuck", details)
 	case len(lagging) > 0:
