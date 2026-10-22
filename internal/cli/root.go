@@ -43,7 +43,7 @@ func NewRootCommand(info BuildInfo) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newVersionCommand(info))
+	root.AddCommand(newVersionCommand(info), newValidateCommand())
 	return root
 }
 
