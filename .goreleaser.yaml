@@ -78,6 +78,8 @@ docker_signs:
 changelog:
   use: github
   sort: asc
+  abbrev: 7
+  format: "{{ .SHA }} {{ .Message }}"
   groups:
     - title: Features
       regexp: '^.*?feat(\(.+\))??!?:.+$'
