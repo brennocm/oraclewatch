@@ -1,0 +1,22 @@
+# Build output
+/bin/
+/dist/
+coverage.out
+*.test
+
+# Secrets: RPC URLs carry API keys; webhooks and bot tokens are credentials.
+.env
+*.env
+!.env.example
+
+# Local, non-project files
+/project.md
+/ideas.md
+CLAUDE.md
+.claude/
+
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
