@@ -1,0 +1,10 @@
+# Release image: GoReleaser builds the binaries; this only copies the one for
+# the target platform into a distroless, non-root base. For local builds
+# from source, use Dockerfile.
+FROM gcr.io/distroless/static:nonroot@sha256:d62067879de890a1def9da0e7766b7d20810a5e5555cef8506b752437d7a3e88
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/oraclewatch /usr/local/bin/oraclewatch
+USER nonroot:nonroot
+EXPOSE 9090
+ENTRYPOINT ["/usr/local/bin/oraclewatch"]
+CMD ["run", "--config", "/etc/oraclewatch/config.yaml", "--listen", "0.0.0.0:9090"]
