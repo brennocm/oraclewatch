@@ -100,7 +100,7 @@ func (e *Engine) cycle(ctx context.Context, ns *networkState) []checks.Result {
 			fs.prev = in.Reading
 			e.o.Recorder.ObserveFeed(ns.cfg.Name, fs.cfg.Name, in.Reading, in.BlockTime.Sub(feeds.TimeOf(in.Reading.Round.UpdatedAt)))
 			if in.Reference != nil && in.Reference.Trusted {
-				e.o.Recorder.ObserveDeviation(ns.cfg.Name, fs.cfg.Name, checks.DeviationRatio(in.Reading.Price, in.Reference.Median))
+				e.o.Recorder.ObserveDeviation(ns.cfg.Name, fs.cfg.Name, checks.DeviationRatio(in.Reading.Price, in.Reference.Median), in.Reference.Median)
 			}
 		}
 		if in.Reference != nil {

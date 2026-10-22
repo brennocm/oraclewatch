@@ -33,6 +33,8 @@ type Metrics struct {
 	feedUpdatedAt *prometheus.GaugeVec
 	feedRound     *prometheus.GaugeVec
 	deviation     *prometheus.GaugeVec
+	feedReference *prometheus.GaugeVec
+	feedHeartbeat *prometheus.GaugeVec
 	checkStatus   *prometheus.GaugeVec
 	sequencerUp   *prometheus.GaugeVec
 	rpcRequests   *prometheus.CounterVec
@@ -63,6 +65,10 @@ func New() *Metrics {
 			Help: "Aggregator round ID (low 64 bits of the proxy round ID)."}, []string{"network", "feed"}),
 		deviation: prometheus.NewGaugeVec(prometheus.GaugeOpts{Namespace: ns, Name: "feed_deviation_ratio",
 			Help: "|oracle - reference| / reference, when the reference is trusted."}, []string{"network", "feed"}),
+		feedReference: prometheus.NewGaugeVec(prometheus.GaugeOpts{Namespace: ns, Name: "feed_reference_price",
+			Help: "Median market reference used for the feed's deviation check (display only)."}, []string{"network", "feed"}),
+		feedHeartbeat: prometheus.NewGaugeVec(prometheus.GaugeOpts{Namespace: ns, Name: "feed_heartbeat_seconds",
+			Help: "Configured heartbeat of the feed."}, []string{"network", "feed"}),
 		checkStatus: prometheus.NewGaugeVec(prometheus.GaugeOpts{Namespace: ns, Name: "check_status",
 			Help: "Latest check status: 0 ok, 1 info, 2 unknown, 3 warning, 4 critical."}, []string{"check", "network", "feed"}),
 		sequencerUp: prometheus.NewGaugeVec(prometheus.GaugeOpts{Namespace: ns, Name: "sequencer_up",
@@ -89,7 +95,7 @@ func New() *Metrics {
 			Help: "Build information; always 1."}, []string{"version", "commit"}),
 	}
 	reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.feedAnswer, m.feedAge, m.feedUpdatedAt, m.feedRound, m.deviation, m.checkStatus, m.sequencerUp,
+		m.feedAnswer, m.feedAge, m.feedUpdatedAt, m.feedRound, m.deviation, m.feedReference, m.feedHeartbeat, m.checkStatus, m.sequencerUp,
 		m.rpcRequests, m.rpcLatency, m.rpcHeight, m.refPrice, m.refErrors,
 		m.cycleDuration, m.cyclesTotal, m.cyclesSkipped, m.alertsSent, m.buildInfo)
 	return m
@@ -115,8 +121,14 @@ func (m *Metrics) ObserveFeed(network, feed string, r *feeds.Reading, age time.D
 }
 
 // ObserveDeviation implements engine.Recorder.
-func (m *Metrics) ObserveDeviation(network, feed string, dev *big.Rat) {
+func (m *Metrics) ObserveDeviation(network, feed string, dev, reference *big.Rat) {
 	m.deviation.WithLabelValues(network, feed).Set(ratFloat(dev))
+	m.feedReference.WithLabelValues(network, feed).Set(ratFloat(reference))
+}
+
+// SetHeartbeat records a feed's configured heartbeat.
+func (m *Metrics) SetHeartbeat(network, feed string, hb time.Duration) {
+	m.feedHeartbeat.WithLabelValues(network, feed).Set(hb.Seconds())
 }
 
 // ObserveCheck implements engine.Recorder.

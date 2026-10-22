@@ -23,4 +23,4 @@ COPY --from=build /out/oraclewatch /usr/local/bin/oraclewatch
 USER nonroot:nonroot
 EXPOSE 9090
 ENTRYPOINT ["/usr/local/bin/oraclewatch"]
-CMD ["run", "--config", "/etc/oraclewatch/config.yaml"]
+CMD ["run", "--config", "/etc/oraclewatch/config.yaml", "--listen", "0.0.0.0:9090"]

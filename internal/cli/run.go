@@ -15,7 +15,7 @@ import (
 )
 
 func newRunCommand(info BuildInfo) *cobra.Command {
-	var path string
+	var path, listen string
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run the monitor as a daemon",
@@ -30,6 +30,12 @@ func newRunCommand(info BuildInfo) *cobra.Command {
 				return &exitError{code: ExitError, err: err}
 			}
 			a.metrics.SetBuildInfo(info.Version, info.Commit)
+			for _, f := range a.cfg.Feeds {
+				a.metrics.SetHeartbeat(f.Network, f.Name, f.Heartbeat.Duration)
+			}
+			if listen != "" {
+				a.cfg.Server.Listen = listen
+			}
 			al := a.cfg.Alerting
 			manager := alert.NewManager(alert.Options{For: al.For.Duration, Cooldown: al.Cooldown.Duration, SendResolved: al.SendResolved, Link: a.link})
 			disp := alert.NewDispatcher(a.notifiers(cmd.OutOrStdout()), alert.DispatcherOptions{
@@ -61,6 +67,7 @@ func newRunCommand(info BuildInfo) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&path, "config", "c", "", "path to the YAML configuration (required)")
+	cmd.Flags().StringVar(&listen, "listen", "", "override server.listen (e.g. 0.0.0.0:9090 inside a container)")
 	_ = cmd.MarkFlagRequired("config") // only fails if the flag does not exist
 	return cmd
 }

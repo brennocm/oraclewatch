@@ -35,7 +35,7 @@ import (
 // happen in the implementation, never in a decision path.
 type Recorder interface {
 	ObserveFeed(network, feed string, r *feeds.Reading, age time.Duration)
-	ObserveDeviation(network, feed string, dev *big.Rat)
+	ObserveDeviation(network, feed string, dev, reference *big.Rat)
 	ObserveCheck(r checks.Result)
 	ObserveSequencer(network string, up bool)
 	ObserveCycle(network string, d time.Duration, ok bool)
@@ -46,7 +46,7 @@ type Recorder interface {
 type nopRecorder struct{}
 
 func (nopRecorder) ObserveFeed(string, string, *feeds.Reading, time.Duration) {}
-func (nopRecorder) ObserveDeviation(string, string, *big.Rat)                 {}
+func (nopRecorder) ObserveDeviation(string, string, *big.Rat, *big.Rat)       {}
 func (nopRecorder) ObserveCheck(checks.Result)                                {}
 func (nopRecorder) ObserveSequencer(string, bool)                             {}
 func (nopRecorder) ObserveCycle(string, time.Duration, bool)                  {}

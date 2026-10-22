@@ -1,2 +1,6 @@
 exec oraclewatch version
 stdout 'oraclewatch v0.0.0-test \(commit e2e'
+
+# healthcheck refuses non-local targets.
+! exec oraclewatch healthcheck --url http://example.com/healthz
+stderr 'must point to localhost'
