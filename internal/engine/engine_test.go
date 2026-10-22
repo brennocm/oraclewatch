@@ -92,7 +92,7 @@ func newFixture(t *testing.T, opts func(*Options)) *fixture {
 			}
 		}
 		fx.chains[cn.Name] = pair
-		n := &chain.Network{Name: cn.Name, ChainID: cn.ChainID, Confirmations: cn.Confirmations, MaxHeadLag: cn.MaxHeadLag.Duration, Clock: clk}
+		n := &chain.Network{Name: cn.Name, ChainID: cn.ChainID, Confirmations: cn.Confirmations, MaxHeadLag: cn.MaxHeadLag.Duration, Clock: clk, RequireVerified: true}
 		for i, c := range pair {
 			n.Endpoints = append(n.Endpoints, chain.NewEndpoint(cn.Name, string(rune('a'+i)), c, chain.EndpointOptions{Timeout: time.Second, Clock: clk}))
 		}
@@ -292,5 +292,31 @@ func TestRunConcurrentSlowRPCAndShutdown(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("alert raised before shutdown was not delivered: %d messages", len(n.msgs))
+	}
+}
+
+func TestDecimalsChangeIsDetectedInTheNextCycle(t *testing.T) {
+	fx := newFixture(t, nil)
+	fx.eng.RunOnce(context.Background()) // cycle 0: metadata read
+	for _, c := range fx.chains["ethereum"] {
+		c.Set(func(c *fakerpc.Chain) { c.Feeds[common.HexToAddress(ethProxy)].Decimals = 18 })
+	}
+	rs := byKey(fx.eng.RunOnce(context.Background())) // cycle 1: not a refresh cycle
+	if r := rs["FW-META-001|ethereum|ETH/USD"]; r.Status != checks.Critical {
+		t.Fatalf("decimals change must be reported at once, not after metadata_refresh cycles: %+v", r)
+	}
+}
+
+func TestCrossChainResultIsInStatus(t *testing.T) {
+	fx := newFixture(t, nil)
+	fx.eng.RunOnce(context.Background())
+	found := false
+	for _, r := range fx.eng.Results() {
+		if r.CheckID == checks.CrossChainID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("FW-XCHAIN-001 must appear in Results() (/status)")
 	}
 }

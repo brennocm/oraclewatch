@@ -211,7 +211,9 @@ func (e *Engine) runCycle(ctx context.Context, ns *networkState) {
 	defer stop()
 
 	results := e.cycle(cctx, ns)
-	results = append(results, e.crossChain(ns.cfg.Name)...)
+	xc := e.crossChain(ns.cfg.Name)
+	e.storeResults(xc)
+	results = append(results, xc...)
 	if e.o.Alerts != nil {
 		notes := e.o.Alerts.Process(results, e.o.Clock.Now())
 		if e.o.Dispatcher != nil {
@@ -243,7 +245,9 @@ func (e *Engine) RunOnce(ctx context.Context) []checks.Result {
 		}()
 	}
 	wg.Wait()
-	all = append(all, e.crossChain("")...)
+	xc := e.crossChain("")
+	e.storeResults(xc)
+	all = append(all, xc...)
 	sortResults(all)
 	return all
 }
@@ -286,6 +290,19 @@ func (e *Engine) Ready() bool {
 		}
 	}
 	return true
+}
+
+// storeResults records results that are not tied to one network's cycle
+// (cross-chain) in metrics and the status store.
+func (e *Engine) storeResults(rs []checks.Result) {
+	for _, r := range rs {
+		e.o.Recorder.ObserveCheck(r)
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for _, r := range rs {
+		e.latest[r.Key()] = r
+	}
 }
 
 func (e *Engine) store(ns *networkState, results []checks.Result, snap *chain.Snapshot, ok bool) {

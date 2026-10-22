@@ -214,3 +214,27 @@ func TestTruncateKeepsUTF8(t *testing.T) {
 		}
 	}
 }
+
+func TestDiscordEscapesUntrustedMarkdown(t *testing.T) {
+	n := notification()
+	n.Result.Summary = `description() is "[claim refund](https://evil.example) @everyone"`
+	n.Result.Details = map[string]string{"description": "**[x](https://evil.example)**"}
+	b, err := json.Marshal(NewDiscord("http://unused", nil, nil).Payload(alert.Message{Notifications: []alert.Notification{n}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var p struct {
+		Embeds []struct {
+			Description string
+			Fields      []struct{ Value string }
+		}
+	}
+	_ = json.Unmarshal(b, &p)
+	all := p.Embeds[0].Description
+	for _, f := range p.Embeds[0].Fields {
+		all += f.Value
+	}
+	if strings.Contains(all, "](") || strings.Contains(all, "**") || strings.Contains(all, "@everyone") {
+		t.Fatalf("markdown not escaped: %s", all)
+	}
+}

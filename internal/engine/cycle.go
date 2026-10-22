@@ -21,7 +21,10 @@ import (
 func (e *Engine) cycle(ctx context.Context, ns *networkState) []checks.Result {
 	start := e.o.Clock.Now()
 	cfg := e.o.Config
-	if ns.cycle%cfg.RPC.ChainIDRecheck == 0 {
+	// Re-check periodically, and every cycle while an endpoint has not been
+	// verified yet (its first check may have failed transiently); unverified
+	// endpoints are never read.
+	if ns.cycle%cfg.RPC.ChainIDRecheck == 0 || ns.net.HasUnverified() {
 		for name, err := range ns.net.VerifyChainIDs(ctx) {
 			var wrong *chain.WrongChainError
 			if errors.As(err, &wrong) {
@@ -159,8 +162,19 @@ func (e *Engine) feedInput(ctx context.Context, ns *networkState, fs *feedState,
 	block := snap.BlockNumber()
 	proxy := fs.cfg.Proxy.Address
 
-	// Metadata: on the first cycle and every metadata_refresh cycles.
-	if fs.metadata == nil || ns.cycle%e.o.Config.RPC.MetadataRefresh == 0 {
+	// decimals() every cycle: normalising with stale decimals would turn a
+	// decimals change into false deviation alerts until the next refresh.
+	// A change forces a full metadata refresh in this same cycle.
+	refresh := fs.metadata == nil || ns.cycle%e.o.Config.RPC.MetadataRefresh == 0
+	if !refresh {
+		d, err := firstOK(snap.Readers, func(c *chain.Endpoint) (uint8, error) {
+			return feeds.Decimals(ctx, c, proxy, block)
+		})
+		refresh = err == nil && d != fs.metadata.Decimals
+	}
+	// Full metadata: on the first cycle, every metadata_refresh cycles, and
+	// when decimals changed.
+	if refresh {
 		md, err := firstOK(snap.Readers, func(c *chain.Endpoint) (feeds.Metadata, error) {
 			return feeds.ReadMetadata(ctx, c, proxy, block)
 		})

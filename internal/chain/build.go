@@ -28,6 +28,8 @@ func NewNetworkFromConfig(ctx context.Context, n *config.Network, o BuildOptions
 		Confirmations: n.Confirmations,
 		MaxHeadLag:    n.MaxHeadLag.Duration,
 		Clock:         o.Clock,
+		// Never read from an endpoint before its chain ID was confirmed.
+		RequireVerified: true,
 	}
 	for _, ep := range n.RPCEndpoints {
 		b, err := DialHTTP(ctx, ep.URL.Value())

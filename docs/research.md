@@ -351,10 +351,11 @@ Per network and cycle, with 2 RPCs and 3 feeds:
 
 - per RPC: `eth_blockNumber` (1) + header of pinned block (1) + `latestRoundData` per
   feed (3) + sequencer `latestRoundData` (1) = 6 calls;
-- metadata (`decimals`, `description`, `version`, `aggregator`, `phaseId`) every
-  10th cycle, and bounds only when the aggregator changes.
+- `decimals()` per feed on one endpoint every cycle (3), the rest of the metadata
+  (`description`, `version`, `aggregator`, `phaseId`) every 10th cycle or when decimals
+  change, and bounds only when the aggregator changes.
 
-That is about 12 calls per minute per network at `poll_interval: 60s`, or 0.2 req/s,
+That is about 15 calls per minute per network at `poll_interval: 60s`, or 0.25 req/s,
 comfortably inside every free tier. The `eth_call`s can be sent in one JSON-RPC batch
 per endpoint (go-ethereum `BatchCallContext`), which keeps HTTP round trips low.
 **Multicall3 is not needed for v1** (it would also hide which RPC returned which value
