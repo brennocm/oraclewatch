@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
@@ -337,5 +339,21 @@ func TestBackoffBounds(t *testing.T) {
 		if d <= 0 || d > p.MaxDelay {
 			t.Fatalf("backoff(%d) = %s out of (0, %s]", attempt, d, p.MaxDelay)
 		}
+	}
+}
+
+func TestHugeRPCResponseIsRejected(t *testing.T) {
+	huge := strings.Repeat("a", MaxResponseSize+1024)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"` + huge + `"}`))
+	}))
+	defer srv.Close()
+	b, err := DialHTTP(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.ChainID(context.Background()); err == nil {
+		t.Fatal("a response larger than MaxResponseSize must fail")
 	}
 }
