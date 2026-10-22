@@ -1,0 +1,21 @@
+# The build context is the repository root, and DEPLOYMENT.md keeps the
+# operator's .env there. Without these rules `COPY . .` would put RPC keys,
+# webhooks and the Grafana password into a build-stage layer and the build
+# cache, even though the final image does not contain them.
+.env
+*.env
+!.env.example
+
+# Not needed to build the binary.
+.git/
+.github/
+bin/
+dist/
+coverage.out
+*.test
+docs/
+deploy/
+CLAUDE.md
+project.md
+ideas.md
+.claude/
