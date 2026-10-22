@@ -1,0 +1,34 @@
+# A valid config passes without network access.
+exec oraclewatch validate-config --config ok.yaml
+stdout 'OK: 1 networks, 1 feeds'
+
+# Every problem is reported at once, with field paths; exit code 2.
+! exec oraclewatch validate-config --config bad.yaml
+stderr 'feeds\[0\].heartbeat: must be > 0'
+stderr 'feeds\[0\].network: unknown network "nowhere"'
+
+# Undefined environment variables are errors.
+! exec oraclewatch validate-config --config undefined.yaml
+stderr 'NOT_SET_ANYWHERE'
+
+-- ok.yaml --
+networks:
+  - name: ethereum
+    chain_id: 1
+    rpc_endpoints: [{name: a, url: "${ETH_RPC}"}, {name: b, url: "${ETH_RPC}"}]
+feeds:
+  - {name: ETH/USD, network: ethereum, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, heartbeat: 1h, deviation_threshold: 0.5%}
+-- bad.yaml --
+networks:
+  - name: ethereum
+    chain_id: 1
+    rpc_endpoints: [{name: a, url: "${ETH_RPC}"}]
+feeds:
+  - {name: ETH/USD, network: nowhere, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, heartbeat: 0s, deviation_threshold: 0.5%}
+-- undefined.yaml --
+networks:
+  - name: ethereum
+    chain_id: 1
+    rpc_endpoints: [{name: a, url: "${NOT_SET_ANYWHERE}"}]
+feeds:
+  - {name: ETH/USD, network: ethereum, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, heartbeat: 1h, deviation_threshold: 0.5%}

@@ -1,0 +1,53 @@
+# Healthy feed and L2 with a sequencer that is up: exit 0.
+exec oraclewatch check --config healthy.yaml
+stdout 'ok +FW-STALE-001 +ethereum +ETH/USD'
+stdout 'ok +FW-SEQ-001 +arbitrum'
+stdout 'ok +FW-XCHAIN-001'
+
+# JSON output.
+exec oraclewatch check --config healthy.yaml --format json
+stdout '"check": "FW-RPC-001"'
+
+# --online validation against the same endpoints.
+exec oraclewatch validate-config --config healthy.yaml --online
+stdout 'ethereum +feed +ETH/USD +OK \(decimals 8'
+
+# feeds list shows the normalised answer.
+exec oraclewatch feeds list --config healthy.yaml
+stdout 'ETH/USD .* 2443.63658508'
+
+# A feed three hours old against a one-hour heartbeat: critical, exit 1.
+! exec oraclewatch check --config stale.yaml
+stdout 'critical +FW-STALE-001 +ethereum +ETH/USD'
+
+# With --fail-on critical the warning-free healthy config still passes.
+exec oraclewatch check --config healthy.yaml --fail-on warning
+
+-- healthy.yaml --
+networks:
+  - name: ethereum
+    chain_id: 1
+    rpc_endpoints: [{name: a, url: "${ETH_RPC}"}, {name: b, url: "${ETH_RPC}"}]
+    poll_interval: 15s
+    call_timeout: 5s
+  - name: arbitrum
+    chain_id: 42161
+    l2: true
+    rpc_endpoints: [{name: a, url: "${ARB_RPC}"}, {name: b, url: "${ARB_RPC}"}]
+    poll_interval: 15s
+    call_timeout: 5s
+    sequencer: {proxy: "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"}
+feeds:
+  - {name: ETH/USD, network: ethereum, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, expected_description: "ETH / USD", heartbeat: 1h, deviation_threshold: 0.5%}
+  - {name: ETH/USD, network: arbitrum, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, expected_description: "ETH / USD", heartbeat: 1h, deviation_threshold: 0.05%}
+log: {level: error}
+-- stale.yaml --
+networks:
+  - name: ethereum
+    chain_id: 1
+    rpc_endpoints: [{name: a, url: "${STALE_RPC}"}, {name: b, url: "${STALE_RPC}"}]
+    poll_interval: 15s
+    call_timeout: 5s
+feeds:
+  - {name: ETH/USD, network: ethereum, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, heartbeat: 1h, deviation_threshold: 0.5%}
+log: {level: error}
