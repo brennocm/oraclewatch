@@ -294,6 +294,38 @@ func TestSingleEndpointWarns(t *testing.T) {
 	}
 }
 
+func TestInsecureOrRedundantEndpointsWarn(t *testing.T) {
+	tests := []struct {
+		name, rpcA, want string
+	}{
+		{"plain http to a remote host", "http://a.example.com/v2/abcdefghijklmnop", "plain http"},
+		{"same host as endpoint b", "https://rpc.example.com/v2/abcdefghijklmnop", "same host"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := Parse([]byte(minimal), env(map[string]string{"RPC_A": tt.rpcA}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(cfg.Warnings) != 1 || !strings.Contains(cfg.Warnings[0], tt.want) {
+				t.Fatalf("warnings = %v", cfg.Warnings)
+			}
+			if strings.Contains(cfg.Warnings[0], "abcdefghijklmnop") {
+				t.Fatalf("secret leaked in warning: %v", cfg.Warnings[0])
+			}
+		})
+	}
+	for _, local := range []string{"http://127.0.0.1:8545", "http://localhost:8545", "http://[::1]:8545"} {
+		cfg, err := Parse([]byte(minimal), env(map[string]string{"RPC_A": local}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(cfg.Warnings) != 0 {
+			t.Errorf("%s: loopback http must not warn: %v", local, cfg.Warnings)
+		}
+	}
+}
+
 func TestParsePercent(t *testing.T) {
 	tests := []struct {
 		in      string

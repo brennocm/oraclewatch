@@ -80,12 +80,12 @@ func validate(cfg *Config, errs *fieldErrors) {
 	if cfg.RPC.MetadataRefresh < 1 {
 		errs.add("rpc.metadata_refresh", "must be >= 1")
 	}
-	validateAlerting(&cfg.Alerting, errs)
+	validateAlerting(cfg, errs)
 	if cfg.SelfHealth.BlindAfterCycles < 1 {
 		errs.add("self_health.blind_after_cycles", "must be >= 1")
 	}
 	if !cfg.SelfHealth.DeadmanURL.IsZero() {
-		checkHTTPURL("self_health.deadman_url", cfg.SelfHealth.DeadmanURL, errs)
+		checkHTTPURL(cfg, "self_health.deadman_url", cfg.SelfHealth.DeadmanURL, errs)
 	}
 	if _, _, err := net.SplitHostPort(cfg.Server.Listen); err != nil {
 		errs.add("server.listen", "must be host:port: %v", err)
@@ -123,6 +123,7 @@ func validateNetwork(cfg *Config, i int, errs *fieldErrors) {
 			"%s.rpc_endpoints: only one endpoint for %q; RPC disagreement (FW-RPC-001) cannot run and a single RPC is trusted for every alert", p, n.Name))
 	}
 	names := map[string]bool{}
+	hosts := map[string]string{} // host -> first endpoint name
 	for j, e := range n.RPCEndpoints {
 		ep := fmt.Sprintf("%s.rpc_endpoints[%d]", p, j)
 		if !namePattern.MatchString(e.Name) {
@@ -131,7 +132,18 @@ func validateNetwork(cfg *Config, i int, errs *fieldErrors) {
 			errs.add(ep+".name", "duplicate endpoint name %q", e.Name)
 		}
 		names[e.Name] = true
-		checkHTTPURL(ep+".url", e.URL, errs)
+		checkHTTPURL(cfg, ep+".url", e.URL, errs)
+		// Two endpoints on one host are one provider: they share failures and,
+		// if it lies, the lie. FW-RPC-001 would compare a provider with itself.
+		if u, err := url.Parse(e.URL.Value()); err == nil && u.Host != "" {
+			host := strings.ToLower(u.Hostname())
+			if first, dup := hosts[host]; dup {
+				cfg.Warnings = append(cfg.Warnings, fmt.Sprintf(
+					"%s.url: same host as endpoint %q; use independent providers so that FW-RPC-001 compares two views", ep, first))
+			} else {
+				hosts[host] = e.Name
+			}
+		}
 	}
 	if n.PollInterval.Duration < MinPollInterval {
 		errs.add(p+".poll_interval", "must be >= %s", MinPollInterval)
@@ -285,7 +297,8 @@ func validateCheckParams(p string, f *Feed, c CheckParams, errs *fieldErrors) {
 	}
 }
 
-func validateAlerting(a *Alerting, errs *fieldErrors) {
+func validateAlerting(cfg *Config, errs *fieldErrors) {
+	a := &cfg.Alerting
 	if a.For.Duration < 0 {
 		errs.add("alerting.for", "must be >= 0")
 	}
@@ -299,7 +312,7 @@ func validateAlerting(a *Alerting, errs *fieldErrors) {
 		errs.add("alerting.storm_threshold", "must be >= 2")
 	}
 	if d := a.Discord; d != nil && !d.WebhookURL.IsZero() {
-		checkHTTPURL("alerting.discord.webhook_url", d.WebhookURL, errs)
+		checkHTTPURL(cfg, "alerting.discord.webhook_url", d.WebhookURL, errs)
 	}
 	if t := a.Telegram; t != nil && t.BotToken.IsZero() != t.ChatID.IsZero() {
 		errs.add("alerting.telegram", "bot_token and chat_id must both be set or both be empty")
@@ -307,8 +320,10 @@ func validateAlerting(a *Alerting, errs *fieldErrors) {
 }
 
 // checkHTTPURL validates a URL held in a Secret. Error messages never include
-// the value itself.
-func checkHTTPURL(path string, s Secret, errs *fieldErrors) {
+// the value itself. Plain http is accepted for loopback (a local node, tests)
+// and warned about otherwise: the URL carries a credential, and an RPC
+// response over plain http can be rewritten in transit.
+func checkHTTPURL(cfg *Config, path string, s Secret, errs *fieldErrors) {
 	if s.IsZero() {
 		errs.add(path, "is empty")
 		return
@@ -323,7 +338,19 @@ func checkHTTPURL(path string, s Secret, errs *fieldErrors) {
 	}
 	if u.Host == "" {
 		errs.add(path, "has no host")
+		return
 	}
+	if u.Scheme == "http" && !isLoopback(u.Hostname()) {
+		cfg.Warnings = append(cfg.Warnings, path+": plain http to a non-loopback host sends the credential in clear text and lets the response be altered in transit; use https")
+	}
+}
+
+func isLoopback(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func positive(p Percent) bool    { return p.IsSet() && p.Rat().Sign() > 0 }
