@@ -191,11 +191,12 @@ func (c SequencerGrace) Evaluate(in *NetworkInput) Result {
 	}
 	since := new(big.Int).Sub(big.NewInt(in.Snapshot.BlockTime.Unix()), r.StartedAt)
 	grace := big.NewInt(int64(in.GracePeriod / time.Second))
-	details := map[string]string{"up_for": since.String() + "s", "grace_period": in.GracePeriod.String()}
+	upFor := secs(new(big.Rat).SetInt(since))
+	details := map[string]string{"up_for": upFor, "grace_period": in.GracePeriod.String()}
 	if since.Cmp(grace) <= 0 {
-		return in.result(c.ID(), Warning, "sequencer recovered "+since.String()+"s ago, inside the "+in.GracePeriod.String()+" grace period", details)
+		return in.result(c.ID(), Warning, "sequencer recovered "+upFor+" ago, inside the "+in.GracePeriod.String()+" grace period", details)
 	}
-	return in.result(c.ID(), OK, "up for "+since.String()+"s", details)
+	return in.result(c.ID(), OK, "up for "+upFor, details)
 }
 
 // SelfHealth is FW-SELF-001: the monitor itself is blind. Critical when no

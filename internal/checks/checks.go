@@ -9,6 +9,7 @@ package checks
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -127,8 +128,15 @@ func durationRat(d time.Duration) *big.Rat {
 	return new(big.Rat).SetFrac(big.NewInt(int64(d)), big.NewInt(int64(time.Second)))
 }
 
-// secs formats a rational number of seconds, for messages only.
-func secs(r *big.Rat) string { return r.FloatString(0) + "s" }
+// secs formats a rational number of seconds as a duration ("40m24s"), for
+// messages only. Values beyond time.Duration's range fall back to seconds.
+func secs(r *big.Rat) string {
+	n, _ := new(big.Int).SetString(r.FloatString(0), 10)
+	if n == nil || !n.IsInt64() || n.Int64() > math.MaxInt64/int64(time.Second) {
+		return r.FloatString(0) + "s"
+	}
+	return (time.Duration(n.Int64()) * time.Second).String()
+}
 
 func maxRat(a, b *big.Rat) *big.Rat {
 	if a.Cmp(b) >= 0 {
