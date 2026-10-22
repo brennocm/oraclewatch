@@ -28,7 +28,22 @@ services:
     build:
       context: ..
     command: ["run", "--config", "/etc/oraclewatch/config.yaml", "--listen", "0.0.0.0:9090"]
-    env_file: [../.env]
+    # Only the variables configs/example.yaml references, not the whole .env
+    # (which also holds the Grafana admin password). Add any variable your own
+    # configuration references.
+    environment:
+      ETH_RPC_URL_PRIMARY: ${ETH_RPC_URL_PRIMARY}
+      ETH_RPC_URL_SECONDARY: ${ETH_RPC_URL_SECONDARY}
+      ARB_RPC_URL_PRIMARY: ${ARB_RPC_URL_PRIMARY}
+      ARB_RPC_URL_SECONDARY: ${ARB_RPC_URL_SECONDARY}
+      BASE_RPC_URL_PRIMARY: ${BASE_RPC_URL_PRIMARY}
+      BASE_RPC_URL_SECONDARY: ${BASE_RPC_URL_SECONDARY}
+      OP_RPC_URL_PRIMARY: ${OP_RPC_URL_PRIMARY}
+      OP_RPC_URL_SECONDARY: ${OP_RPC_URL_SECONDARY}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      DEADMAN_URL: ${DEADMAN_URL:-}
     volumes:
       - ../configs/example.yaml:/etc/oraclewatch/config.yaml:ro
     networks: [monitoring, egress]
