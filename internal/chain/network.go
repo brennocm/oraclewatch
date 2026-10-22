@@ -21,6 +21,10 @@ type Network struct {
 	MaxHeadLag    time.Duration
 	Endpoints     []*Endpoint
 	Clock         clock.Clock
+	// RequireVerified excludes endpoints whose eth_chainId has not matched
+	// yet. Set for every network built from configuration, so an endpoint
+	// whose first chain ID check failed transiently is never read unverified.
+	RequireVerified bool
 }
 
 // Head is what one endpoint reported as its latest block.
@@ -66,11 +70,22 @@ func (s *Snapshot) BlockNumber() *big.Int { return new(big.Int).SetUint64(s.Bloc
 func (n *Network) AvailableEndpoints() []*Endpoint {
 	var out []*Endpoint
 	for _, e := range n.Endpoints {
-		if e.Available() {
+		if e.Available() && (!n.RequireVerified || e.Verified()) {
 			out = append(out, e)
 		}
 	}
 	return out
+}
+
+// HasUnverified reports whether an enabled endpoint still needs a successful
+// chain ID check.
+func (n *Network) HasUnverified() bool {
+	for _, e := range n.Endpoints {
+		if e.Disabled() == nil && !e.Verified() {
+			return true
+		}
+	}
+	return false
 }
 
 // VerifyChainIDs checks eth_chainId on every enabled endpoint. Endpoints that

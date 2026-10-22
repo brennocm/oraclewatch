@@ -61,6 +61,16 @@ var discordColor = map[checks.Status]int{
 	checks.Warning: 0xF1C40F, checks.Critical: 0xE74C3C,
 }
 
+// discordMarkdown escapes the characters Discord renders as markdown, so that
+// text from untrusted sources (contract strings, RPC errors) cannot inject
+// masked links ([text](url)), mentions or formatting into the alert channel.
+var discordMarkdown = strings.NewReplacer(
+	`\`, `\\`, "*", `\*`, "_", `\_`, "~", `\~`, "`", "\\`", "|", `\|`,
+	">", `\>`, "[", `\[`, "]", `\]`, "(", `\(`, ")", `\)`, "#", `\#`, "@", "@\u200b",
+)
+
+func discordText(s string, n int) string { return truncate(discordMarkdown.Replace(s), n) }
+
 // Discord posts to an incoming webhook.
 type Discord struct {
 	url string
@@ -107,7 +117,7 @@ func (d *Discord) Payload(m alert.Message) any {
 	if m.Storm {
 		p.Embeds = []discordEmbed{{
 			Title:       truncate(fmt.Sprintf("Alert storm: %d alerts", len(m.Notifications)), discordTitleMax),
-			Description: truncate(strings.Join(stormLines(m), "\n"), discordDescMax),
+			Description: discordText(strings.Join(stormLines(m), "\n"), discordDescMax),
 			Color:       discordColor[m.Worst()],
 		}}
 		return p
@@ -118,8 +128,8 @@ func (d *Discord) Payload(m alert.Message) any {
 		color = discordColor[checks.OK]
 	}
 	e := discordEmbed{
-		Title:       truncate(title(n), discordTitleMax),
-		Description: truncate(n.Result.Summary, discordDescMax),
+		Title:       truncate(title(n), discordTitleMax), // built from config names and check IDs only
+		Description: discordText(n.Result.Summary, discordDescMax),
 		URL:         n.Link,
 		Color:       color,
 		Timestamp:   n.Result.Observed.UTC().Format(time.RFC3339),
@@ -128,7 +138,7 @@ func (d *Discord) Payload(m alert.Message) any {
 		if value == "" || len(e.Fields) >= discordFields {
 			return
 		}
-		e.Fields = append(e.Fields, discordField{Name: truncate(name, discordTitleMax), Value: truncate(value, discordFieldMax), Inline: inline})
+		e.Fields = append(e.Fields, discordField{Name: truncate(name, discordTitleMax), Value: discordText(value, discordFieldMax), Inline: inline})
 	}
 	add("Network", n.Result.Network, true)
 	add("Feed", n.Result.Feed, true)

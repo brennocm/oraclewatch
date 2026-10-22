@@ -76,6 +76,7 @@ type Endpoint struct {
 	openUntil time.Time
 	openFor   time.Duration
 	disabled  error
+	verified  bool // eth_chainId matched at least once
 }
 
 // EndpointOptions configures an Endpoint. Zero values select the defaults.
@@ -178,7 +179,18 @@ func (e *Endpoint) VerifyChainID(ctx context.Context, want uint64) error {
 		e.Disable(wrong)
 		return wrong
 	}
+	e.mu.Lock()
+	e.verified = true
+	e.mu.Unlock()
 	return nil
+}
+
+// Verified reports whether eth_chainId has matched the configured chain at
+// least once.
+func (e *Endpoint) Verified() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.verified
 }
 
 // HeaderByNumber calls eth_getBlockByNumber; nil means the latest block.
@@ -231,8 +243,15 @@ func (e *Endpoint) call(ctx context.Context, method string, fn func(context.Cont
 			return &EndpointError{Endpoint: e.name, Method: method, Err: ctx.Err()}
 		}
 		if !IsTransient(err) {
-			// The endpoint answered (for example "execution reverted").
-			e.recordSuccess()
+			// A JSON-RPC error (for example "execution reverted") is an
+			// answer: the endpoint works. Anything else that is not worth
+			// retrying (HTTP 401/403 from a revoked key, a malformed
+			// response) is a failure of the endpoint.
+			if isJSONRPCAnswer(err) {
+				e.recordSuccess()
+			} else {
+				e.recordFailure()
+			}
 			return &EndpointError{Endpoint: e.name, Method: method, Err: e.redactor.Error(err)}
 		}
 		if attempt >= e.retry.MaxRetries {

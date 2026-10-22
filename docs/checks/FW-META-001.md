@@ -18,7 +18,9 @@ Moonwell cbETH, Feb 2026 (related class: unit/composition errors).
 
 ## Parameters
 
-`expected_decimals`, `expected_description` per feed.
+`expected_decimals`, `expected_description` per feed. `decimals()` is read every cycle (a
+change also triggers an immediate full metadata refresh, so prices are never normalised
+with stale decimals); `description()` and `version()` every `rpc.metadata_refresh` cycles.
 
 ## Known false positives and tuning
 

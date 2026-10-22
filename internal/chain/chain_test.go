@@ -357,3 +357,38 @@ func TestHugeRPCResponseIsRejected(t *testing.T) {
 		t.Fatal("a response larger than MaxResponseSize must fail")
 	}
 }
+
+func TestUnverifiedEndpointIsNotUsed(t *testing.T) {
+	clk := clock.NewFake(t0)
+	flaky := newFake(1, 10, t0, 0)
+	flaky.errs = []error{rpc.HTTPError{StatusCode: 503}, rpc.HTTPError{StatusCode: 503}, rpc.HTTPError{StatusCode: 503}}
+	good := newTestEndpoint("good", newFake(1, 10, t0, 0), clk)
+	bad := newTestEndpoint("flaky", flaky, clk)
+	n := &Network{Name: "x", ChainID: 1, MaxHeadLag: time.Minute, Clock: clk, RequireVerified: true, Endpoints: []*Endpoint{good, bad}}
+	n.VerifyChainIDs(context.Background())
+	if !n.HasUnverified() {
+		t.Fatal("flaky endpoint should still need verification")
+	}
+	if got := n.AvailableEndpoints(); len(got) != 1 || got[0] != good {
+		t.Fatalf("unverified endpoint must not be used: %v", got)
+	}
+	n.VerifyChainIDs(context.Background())
+	if n.HasUnverified() || len(n.AvailableEndpoints()) != 2 {
+		t.Fatal("endpoint should be used once verified")
+	}
+}
+
+func TestHTTPAuthErrorCountsAgainstEndpoint(t *testing.T) {
+	f := newFake(1, 10, t0, 0)
+	e := newTestEndpoint("a", f, clock.NewFake(t0))
+	for i := 0; i < DefaultBreakerPolicy.FailureThreshold; i++ {
+		f.errs = []error{rpc.HTTPError{StatusCode: 401}}
+		_, _ = e.CallContract(context.Background(), ethereum.CallMsg{}, nil)
+	}
+	if e.Available() {
+		t.Fatal("a revoked API key (HTTP 401) must open the breaker")
+	}
+	if f.calls != DefaultBreakerPolicy.FailureThreshold {
+		t.Fatalf("401 must not be retried: %d calls", f.calls)
+	}
+}

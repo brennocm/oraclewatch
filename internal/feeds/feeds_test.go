@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
@@ -141,4 +142,22 @@ func FuzzDecodeLatestRound(f *testing.F) {
 		_, _ = unpackOne[*big.Int](boundsABI, "minAnswer", data)
 		_, _ = unpackAddress(proxyABI, "aggregator", data)
 	})
+}
+
+func TestSanitizeText(t *testing.T) {
+	tests := map[string]string{
+		"ETH / USD":                            "ETH / USD",
+		"AccessControlledOCR2Aggregator 1.0.0": "AccessControlledOCR2Aggregator 1.0.0",
+		"ETH\x1b[2J/USD":                       "ETH?[2J/USD",
+		"caf\u00e9":                            "caf??",
+		"a\nb":                                 "a?b",
+	}
+	for in, want := range tests {
+		if got := SanitizeText(in); got != want {
+			t.Errorf("SanitizeText(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := SanitizeText(strings.Repeat("x", 1000)); len(got) != maxTextLen {
+		t.Errorf("length = %d", len(got))
+	}
 }

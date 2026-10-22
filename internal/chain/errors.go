@@ -72,3 +72,11 @@ func IsTransient(err error) bool {
 	var netErr net.Error
 	return errors.As(err, &netErr)
 }
+
+// isJSONRPCAnswer reports whether err is an error object returned by the
+// JSON-RPC server, as opposed to a transport or HTTP failure.
+func isJSONRPCAnswer(err error) bool {
+	var rpcErr rpc.Error
+	var httpErr rpc.HTTPError
+	return errors.As(err, &rpcErr) && !errors.As(err, &httpErr)
+}

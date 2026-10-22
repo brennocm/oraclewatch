@@ -148,6 +148,17 @@ func ReadLatest(ctx context.Context, c chain.Caller, endpoint string, proxy comm
 	}, nil
 }
 
+// Decimals calls decimals() on proxy at block.
+func Decimals(ctx context.Context, c chain.Caller, proxy common.Address, block *big.Int) (uint8, error) {
+	d, err := call(ctx, c, proxy, block, pack(aggregatorV3ABI, "decimals"), func(b []byte) (uint8, error) {
+		return unpackOne[uint8](aggregatorV3ABI, "decimals", b)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("decimals: %w", err)
+	}
+	return d, nil
+}
+
 // Metadata describes a proxy and the aggregator it currently points to.
 type Metadata struct {
 	Decimals    uint8
@@ -167,7 +178,8 @@ func ReadMetadata(ctx context.Context, c chain.Caller, proxy common.Address, blo
 		return m, fmt.Errorf("decimals: %w", err)
 	}
 	if m.Description, err = call(ctx, c, proxy, block, pack(aggregatorV3ABI, "description"), func(b []byte) (string, error) {
-		return unpackOne[string](aggregatorV3ABI, "description", b)
+		d, err := unpackOne[string](aggregatorV3ABI, "description", b)
+		return SanitizeText(d), err
 	}); err != nil {
 		return m, fmt.Errorf("description: %w", err)
 	}
@@ -215,9 +227,31 @@ func ReadBounds(ctx context.Context, c chain.Caller, aggregator common.Address, 
 		return unpackOne[string](boundsABI, "typeAndVersion", d)
 	})
 	if err == nil {
-		b.TypeAndVersion = tv
+		b.TypeAndVersion = SanitizeText(tv)
 	}
 	return b, nil
+}
+
+// maxTextLen bounds strings read from contracts.
+const maxTextLen = 128
+
+// SanitizeText makes a string read from a contract safe to log and to put in
+// alerts. Contract strings (and anything a lying RPC returns) are untrusted:
+// they could carry terminal escape sequences or be huge. Only printable ASCII
+// is kept (other bytes become '?') and the length is capped. Feed
+// descriptions such as "ETH / USD" are unaffected, and a sanitised value
+// still differs from the configured one, so FW-META-001 still fires.
+func SanitizeText(s string) string {
+	b := []byte(s)
+	if len(b) > maxTextLen {
+		b = b[:maxTextLen]
+	}
+	for i, c := range b {
+		if c < 0x20 || c > 0x7e {
+			b[i] = '?'
+		}
+	}
+	return string(b)
 }
 
 // Change is one metadata field that differs between two reads.
