@@ -1,0 +1,20 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$GRAFANA_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	# Only Grafana is exposed. Prometheus and oraclewatch's /status are not
+	# reachable from outside. Rate limiting needs a Caddy plugin and is left
+	# to the operator (see docs/DEPLOYMENT.md).
+	reverse_proxy grafana:3000
+}
