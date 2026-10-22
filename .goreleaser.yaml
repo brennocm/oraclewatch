@@ -1,0 +1,116 @@
+# GoReleaser v2 configuration. Runs from .github/workflows/release.yml on v* tags.
+# Validate locally: goreleaser check && goreleaser release --snapshot --clean
+version: 2
+
+project_name: oraclewatch
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: oraclewatch
+    main: ./cmd/oraclewatch
+    binary: oraclewatch
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}" # reproducible builds
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - configs/example.yaml
+      - configs/feeds/*.yaml
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# SBOM (SPDX) for every archive, generated with syft.
+sboms:
+  - artifacts: archive
+
+# Keyless signature of the checksum file (covers every archive).
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
+    artifacts: checksum
+
+# Multi-arch image built by buildx from the binaries above (no compilation in
+# the Dockerfile). buildx attaches an SBOM attestation to the image.
+dockers_v2:
+  - id: image
+    ids: [oraclewatch]
+    dockerfile: Dockerfile.release
+    images: ["ghcr.io/brennocm/oraclewatch"]
+    tags:
+      - "v{{ .Version }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms: [linux/amd64, linux/arm64]
+    sbom: "true"
+    labels:
+      org.opencontainers.image.title: oraclewatch
+      org.opencontainers.image.description: Consumer-side monitoring for Chainlink Data Feeds (not affiliated with Chainlink Labs)
+      org.opencontainers.image.source: https://github.com/brennocm/oraclewatch
+      org.opencontainers.image.licenses: Apache-2.0
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .CommitDate }}"
+
+# Keyless signature of the pushed image manifest, by digest.
+docker_signs:
+  - cmd: cosign
+    args: ["sign", "${artifact}@${digest}", "--yes"]
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Security and dependencies
+      regexp: '^.*?(build|deps)(\(.+\))??!?:.+$'
+      order: 2
+    - title: Other
+      order: 999
+  filters:
+    exclude: ['^docs:', '^test:', '^chore:', '^ci:']
+
+release:
+  github:
+    owner: brennocm
+    name: oraclewatch
+  draft: true # reviewed and published by hand
+  footer: |
+    ## Verify
+
+    ```sh
+    cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json \
+      --certificate-identity 'https://github.com/brennocm/oraclewatch/.github/workflows/release.yml@refs/tags/{{ .Tag }}' \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com
+    sha256sum --ignore-missing -c checksums.txt
+
+    cosign verify ghcr.io/brennocm/oraclewatch:{{ .Tag }} \
+      --certificate-identity 'https://github.com/brennocm/oraclewatch/.github/workflows/release.yml@refs/tags/{{ .Tag }}' \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com
+    gh attestation verify oci://ghcr.io/brennocm/oraclewatch:{{ .Tag }} --owner brennocm
+    ```
+
+    Not affiliated with Chainlink Labs.
