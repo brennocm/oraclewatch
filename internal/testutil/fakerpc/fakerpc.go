@@ -43,7 +43,9 @@ type Chain struct {
 	HeadAt time.Time
 	Delay  time.Duration
 	Fail   bool
-	Feeds  map[common.Address]*Feed
+	// Garbage makes eth_call return bytes that are not valid ABI output.
+	Garbage bool
+	Feeds   map[common.Address]*Feed
 }
 
 // New returns a chain at block 1000 with head time headAt.
@@ -113,6 +115,9 @@ func (c *Chain) CallContract(ctx context.Context, msg ethereum.CallMsg, _ *big.I
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.Garbage {
+		return []byte{0xde, 0xad, 0xbe, 0xef}, nil
+	}
 	var f *Feed
 	for addr, fd := range c.Feeds {
 		if addr == *msg.To || fd.Aggregator == *msg.To {
