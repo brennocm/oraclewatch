@@ -276,16 +276,21 @@ func (e *Engine) Health() []NetworkHealth {
 	return out
 }
 
-// Ready reports whether every network has at least one healthy endpoint and
-// completed a successful cycle recently.
+// readyCycles is how many poll intervals may pass after a network's last
+// successful cycle before the engine stops being ready.
+const readyCycles = 3
+
+// Ready reports whether every network's last cycle succeeded and that cycle
+// is recent. The age matters as much as the outcome: a worker that stopped
+// completing cycles would otherwise keep its last healthy state, and the
+// dead man's switch, which pings only while Ready, would never fall silent.
 func (e *Engine) Ready() bool {
+	now := e.o.Clock.Now()
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	if len(e.health) < len(e.networks) {
-		return false
-	}
-	for _, h := range e.health {
-		if !h.Healthy {
+	for _, ns := range e.networks {
+		h, ok := e.health[ns.cfg.Name]
+		if !ok || !h.Healthy || now.Sub(h.LastSuccess) > readyCycles*ns.cfg.PollInterval.Duration {
 			return false
 		}
 	}

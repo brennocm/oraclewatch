@@ -307,6 +307,20 @@ func TestDecimalsChangeIsDetectedInTheNextCycle(t *testing.T) {
 	}
 }
 
+func TestReadyExpiresWithoutNewCycles(t *testing.T) {
+	fx := newFixture(t, nil)
+	fx.eng.RunOnce(context.Background())
+	if !fx.eng.Ready() {
+		t.Fatal("engine should be ready after a healthy cycle")
+	}
+	// No cycle completes for longer than readyCycles poll intervals: a stuck
+	// worker must not keep the dead man's switch fed.
+	fx.clk.Advance(readyCycles*fx.cfg.Networks[0].PollInterval.Duration + time.Second)
+	if fx.eng.Ready() {
+		t.Fatal("engine must not stay ready when its last successful cycle is old")
+	}
+}
+
 func TestCrossChainResultIsInStatus(t *testing.T) {
 	fx := newFixture(t, nil)
 	fx.eng.RunOnce(context.Background())
