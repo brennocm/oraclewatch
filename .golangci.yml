@@ -21,9 +21,13 @@ linters:
     - unparam
     - usestdlibvars
   settings:
-    gosec:
-      excludes:
-        - G115 # integer overflow conversion: every narrowing conversion is bounds-checked by hand and tested
+    errcheck:
+      # CLI output to stdout/stderr: there is nothing useful to do if writing
+      # the result line fails, and checking every call hides the logic.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
     revive:
       rules:
         - name: exported

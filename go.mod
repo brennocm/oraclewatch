@@ -2,9 +2,16 @@ module github.com/brennocm/oraclewatch
 
 go 1.27.3
 
-require github.com/spf13/cobra v1.10.2
+require (
+	github.com/ethereum/go-ethereum v1.17.9
+	github.com/spf13/cobra v1.10.2
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
+	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
