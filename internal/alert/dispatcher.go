@@ -93,7 +93,9 @@ func NewDispatcher(notifiers []Notifier, o DispatcherOptions) *Dispatcher {
 }
 
 // Enqueue hands notifications to the dispatcher. It never blocks the caller
-// for long: if the buffer is full the call waits until ctx is done.
+// for long: if the buffer is full the call waits until ctx is done, and the
+// notifications are then dropped. A drop is logged as an error: the manager
+// already counts them as sent, so they would otherwise vanish without trace.
 func (d *Dispatcher) Enqueue(ctx context.Context, ns []Notification) {
 	if len(ns) == 0 {
 		return
@@ -101,6 +103,7 @@ func (d *Dispatcher) Enqueue(ctx context.Context, ns []Notification) {
 	select {
 	case d.in <- ns:
 	case <-ctx.Done():
+		d.o.Logger.Error("alert queue full; notifications dropped", "count", len(ns), "worst", Message{Notifications: ns}.Worst().String())
 	}
 }
 

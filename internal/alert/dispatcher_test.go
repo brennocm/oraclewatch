@@ -1,7 +1,10 @@
 package alert
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -69,6 +72,21 @@ func TestDispatcherFlushesOnShutdown(t *testing.T) {
 	}
 	if c.count() != 1 {
 		t.Fatalf("pending alert lost on shutdown: %d sent", c.count())
+	}
+}
+
+func TestDispatcherLogsDroppedNotifications(t *testing.T) {
+	var buf bytes.Buffer
+	d := NewDispatcher(nil, DispatcherOptions{Logger: slog.New(slog.NewTextHandler(&buf, nil))})
+	// Run is not started, so the buffer fills and the next Enqueue waits for ctx.
+	for range cap(d.in) {
+		d.Enqueue(context.Background(), notes(1))
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	d.Enqueue(ctx, notes(2))
+	if !strings.Contains(buf.String(), "notifications dropped") || !strings.Contains(buf.String(), "count=2") {
+		t.Fatalf("a dropped notification must be logged, got %q", buf.String())
 	}
 }
 
