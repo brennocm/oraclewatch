@@ -49,11 +49,11 @@ fuzz: ## Run every fuzz target for FUZZTIME each
 	  done; \
 	done
 
-abigen: ## Regenerate typed contract bindings from the vendored ABIs
-	go generate ./internal/feeds/...
+abigen: ## Regenerate the test doubles' Go bindings from their committed ABI/bytecode
+	scripts/build-contracts.sh --bindings-only
 
 contracts: ## Recompile the Solidity mocks used by integration tests (pinned solc)
-	go generate ./testdata/contracts/...
+	SOLC=$(SOLC) scripts/build-contracts.sh
 
 docker: ## Build the container image for the host platform
 	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) --build-arg DATE=$(DATE) -t $(IMAGE) .
