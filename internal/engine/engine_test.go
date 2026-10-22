@@ -16,6 +16,7 @@ import (
 	"github.com/brennocm/oraclewatch/internal/checks"
 	"github.com/brennocm/oraclewatch/internal/clock"
 	"github.com/brennocm/oraclewatch/internal/config"
+	"github.com/brennocm/oraclewatch/internal/feeds"
 	"github.com/brennocm/oraclewatch/internal/testutil/fakerpc"
 )
 
@@ -304,6 +305,38 @@ func TestDecimalsChangeIsDetectedInTheNextCycle(t *testing.T) {
 	rs := byKey(fx.eng.RunOnce(context.Background())) // cycle 1: not a refresh cycle
 	if r := rs["FW-META-001|ethereum|ETH/USD"]; r.Status != checks.Critical {
 		t.Fatalf("decimals change must be reported at once, not after metadata_refresh cycles: %+v", r)
+	}
+}
+
+type priceRecorder struct {
+	nopRecorder
+	mu    sync.Mutex
+	price map[string]*big.Rat // network/feed -> last normalised price
+}
+
+func (r *priceRecorder) ObserveFeed(network, feed string, rd *feeds.Reading, _ time.Duration) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.price[network+"/"+feed] = rd.Price
+}
+
+func TestDecimalsChangeNormalisesEvenIfMetadataRefreshFails(t *testing.T) {
+	rec := &priceRecorder{price: map[string]*big.Rat{}}
+	fx := newFixture(t, func(o *Options) { o.Recorder = rec })
+	fx.eng.RunOnce(context.Background()) // cycle 0: metadata read with 8 decimals
+	want := rec.price["ethereum/ETH/USD"]
+	for _, c := range fx.chains["ethereum"] {
+		c.Set(func(c *fakerpc.Chain) {
+			f := c.Feeds[common.HexToAddress(ethProxy)]
+			// Same price, now with 18 decimals; the full refresh fails.
+			f.Decimals = 18
+			f.Answer = new(big.Int).Mul(f.Answer, big.NewInt(1e10))
+			c.Revert = map[string]bool{"description": true}
+		})
+	}
+	fx.eng.RunOnce(context.Background())
+	if got := rec.price["ethereum/ETH/USD"]; got.Cmp(want) != 0 {
+		t.Fatalf("price normalised with stale decimals: got %s, want %s", got.FloatString(2), want.FloatString(2))
 	}
 }
 

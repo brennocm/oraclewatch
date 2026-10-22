@@ -45,7 +45,9 @@ type Chain struct {
 	Fail   bool
 	// Garbage makes eth_call return bytes that are not valid ABI output.
 	Garbage bool
-	Feeds   map[common.Address]*Feed
+	// Revert lists methods (by ABI name) whose eth_call reverts.
+	Revert map[string]bool
+	Feeds  map[common.Address]*Feed
 }
 
 // New returns a chain at block 1000 with head time headAt.
@@ -131,6 +133,9 @@ func (c *Chain) CallContract(ctx context.Context, msg ethereum.CallMsg, _ *big.I
 		m, err := a.MethodById(msg.Data[:4])
 		if err != nil {
 			continue
+		}
+		if c.Revert[m.Name] {
+			return nil, errors.New("execution reverted")
 		}
 		var vals []any
 		switch m.Name {

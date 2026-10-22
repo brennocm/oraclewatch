@@ -166,11 +166,15 @@ func (e *Engine) feedInput(ctx context.Context, ns *networkState, fs *feedState,
 	// decimals change into false deviation alerts until the next refresh.
 	// A change forces a full metadata refresh in this same cycle.
 	refresh := fs.metadata == nil || ns.cycle%e.o.Config.RPC.MetadataRefresh == 0
+	var current *uint8 // decimals() read at this block, if known
 	if !refresh {
 		d, err := firstOK(snap.Readers, func(c *chain.Endpoint) (uint8, error) {
 			return feeds.Decimals(ctx, c, proxy, block)
 		})
-		refresh = err == nil && d != fs.metadata.Decimals
+		if err == nil {
+			current = &d
+			refresh = d != fs.metadata.Decimals
+		}
 	}
 	// Full metadata: on the first cycle, every metadata_refresh cycles, and
 	// when decimals changed.
@@ -184,6 +188,7 @@ func (e *Engine) feedInput(ctx context.Context, ns *networkState, fs *feedState,
 			in.PrevMetadata = fs.metadata
 			fs.metadata = &md
 			in.Metadata = &md
+			current = &md.Decimals
 		}
 	}
 	// Bounds: whenever the aggregator differs from the one they were read for.
@@ -221,9 +226,15 @@ func (e *Engine) feedInput(ctx context.Context, ns *networkState, fs *feedState,
 	if e.o.Config.RPC.CompareEndpoints {
 		in.Reads = reads
 	}
+	// Normalise with the on-chain value: this block's decimals() if it was
+	// read (even when the full metadata refresh it triggered failed), else the
+	// last metadata, else the configured value.
 	decimals := in.ExpectedDecimals
-	if fs.metadata != nil {
-		decimals = fs.metadata.Decimals // normalise with the on-chain value
+	switch {
+	case current != nil:
+		decimals = *current
+	case fs.metadata != nil:
+		decimals = fs.metadata.Decimals
 	}
 	for _, r := range reads {
 		if r.Err == nil {
