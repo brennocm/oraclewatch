@@ -22,6 +22,7 @@ func TestBinaryHasNoSigningCode(t *testing.T) {
 		"github.com/ethereum/go-ethereum/accounts/abi/bind",
 		"github.com/ethereum/go-ethereum/ethclient/simulated",
 		"github.com/brennocm/oraclewatch/internal/feeds/feedstest",
+		"github.com/brennocm/oraclewatch/internal/testutil",
 	}
 	for _, dep := range strings.Fields(string(out)) {
 		for _, f := range forbidden {

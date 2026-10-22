@@ -78,6 +78,8 @@ type Engine struct {
 	networks []*networkState
 	xchain   *crossChainStore
 
+	once bool // set by RunOnce
+
 	mu     sync.RWMutex
 	latest map[string]checks.Result
 	health map[string]NetworkHealth
@@ -219,8 +221,12 @@ func (e *Engine) runCycle(ctx context.Context, ns *networkState) {
 }
 
 // RunOnce runs a single cycle on every network concurrently and returns all
-// results, including cross-chain ones. It is the `check` command.
+// results, including cross-chain ones. It is the `check` command. With a
+// single cycle there is no point waiting blind_after_cycles: a network that
+// could not be read at all makes FW-SELF-001 critical immediately, so a blind
+// CI run fails instead of passing on Unknown results.
 func (e *Engine) RunOnce(ctx context.Context) []checks.Result {
+	e.once = true
 	var mu sync.Mutex
 	var all []checks.Result
 	var wg sync.WaitGroup

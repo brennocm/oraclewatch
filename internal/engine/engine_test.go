@@ -16,6 +16,7 @@ import (
 	"github.com/brennocm/oraclewatch/internal/checks"
 	"github.com/brennocm/oraclewatch/internal/clock"
 	"github.com/brennocm/oraclewatch/internal/config"
+	"github.com/brennocm/oraclewatch/internal/testutil/fakerpc"
 )
 
 const (
@@ -58,17 +59,17 @@ alerting: {for: 0s}
 type fixture struct {
 	cfg    *config.Config
 	clk    *clock.Fake
-	chains map[string][2]*fakeChain
+	chains map[string][2]*fakerpc.Chain
 	eng    *Engine
 }
 
 var now0 = time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 
-func ethFeed(agg string, answer int64, updatedAt time.Time) *fakeFeed {
-	return &fakeFeed{
-		decimals: 8, description: "ETH / USD", aggregator: common.HexToAddress(agg), phase: 7,
-		round: big.NewInt(100), answer: big.NewInt(answer), startedAt: updatedAt.Unix() - 10, updatedAt: updatedAt.Unix(),
-		min: big.NewInt(1), max: new(big.Int).Lsh(big.NewInt(1), 180), typeVersion: "AccessControlledOCR2Aggregator 1.0.0",
+func ethFeed(agg string, answer int64, updatedAt time.Time) *fakerpc.Feed {
+	return &fakerpc.Feed{
+		Decimals: 8, Description: "ETH / USD", Aggregator: common.HexToAddress(agg), Phase: 7,
+		Round: big.NewInt(100), Answer: big.NewInt(answer), StartedAt: updatedAt.Unix() - 10, UpdatedAt: updatedAt.Unix(),
+		Min: big.NewInt(1), Max: new(big.Int).Lsh(big.NewInt(1), 180), TypeAndVersion: "AccessControlledOCR2Aggregator 1.0.0",
 	}
 }
 
@@ -76,18 +77,18 @@ func newFixture(t *testing.T, opts func(*Options)) *fixture {
 	t.Helper()
 	cfg := testConfig(t)
 	clk := clock.NewFake(now0)
-	fx := &fixture{cfg: cfg, clk: clk, chains: map[string][2]*fakeChain{}}
+	fx := &fixture{cfg: cfg, clk: clk, chains: map[string][2]*fakerpc.Chain{}}
 	var nets []*chain.Network
 	for _, cn := range cfg.Networks {
-		pair := [2]*fakeChain{newFakeChain(t, cn.ChainID, now0), newFakeChain(t, cn.ChainID, now0)}
+		pair := [2]*fakerpc.Chain{fakerpc.New(cn.ChainID, now0), fakerpc.New(cn.ChainID, now0)}
 		for _, c := range pair {
 			if cn.Name == "ethereum" {
-				c.feeds[common.HexToAddress(ethProxy)] = ethFeed(ethAgg, 244363658508, now0.Add(-time.Minute))
+				c.Feeds[common.HexToAddress(ethProxy)] = ethFeed(ethAgg, 244363658508, now0.Add(-time.Minute))
 			} else {
-				c.feeds[common.HexToAddress(arbProxy)] = ethFeed(arbAgg, 244300000000, now0.Add(-time.Minute))
+				c.Feeds[common.HexToAddress(arbProxy)] = ethFeed(arbAgg, 244300000000, now0.Add(-time.Minute))
 				seq := ethFeed(seqProxy, 0, now0.Add(-48*time.Hour))
-				seq.aggregator = common.HexToAddress("0xC1303BBBaf172C55848D3Cb91606d8E27FF38428")
-				c.feeds[common.HexToAddress(seqProxy)] = seq
+				seq.Aggregator = common.HexToAddress("0xC1303BBBaf172C55848D3Cb91606d8E27FF38428")
+				c.Feeds[common.HexToAddress(seqProxy)] = seq
 			}
 		}
 		fx.chains[cn.Name] = pair
@@ -138,13 +139,13 @@ func TestRunOnceHealthy(t *testing.T) {
 func TestRunOnceDetectsLyingRPCAndStaleFeed(t *testing.T) {
 	fx := newFixture(t, nil)
 	eth := fx.chains["ethereum"]
-	eth[1].set(func() { eth[1].feeds[common.HexToAddress(ethProxy)].answer = big.NewInt(100) }) // lies
+	eth[1].Set(func(*fakerpc.Chain) { eth[1].Feeds[common.HexToAddress(ethProxy)].Answer = big.NewInt(100) }) // lies
 	arb := fx.chains["arbitrum"]
 	for _, c := range arb {
-		c.set(func() {
-			f := c.feeds[common.HexToAddress(arbProxy)]
-			f.updatedAt = now0.Add(-3 * time.Hour).Unix()
-			f.startedAt = f.updatedAt - 5
+		c.Set(func(*fakerpc.Chain) {
+			f := c.Feeds[common.HexToAddress(arbProxy)]
+			f.UpdatedAt = now0.Add(-3 * time.Hour).Unix()
+			f.StartedAt = f.UpdatedAt - 5
 		})
 	}
 	rs := byKey(fx.eng.RunOnce(context.Background()))
@@ -161,7 +162,7 @@ func TestRunOnceDetectsLyingRPCAndStaleFeed(t *testing.T) {
 
 func TestWrongChainEndpointIsDisabled(t *testing.T) {
 	fx := newFixture(t, nil)
-	fx.chains["ethereum"][1].chainID = 56
+	fx.chains["ethereum"][1].Set(func(c *fakerpc.Chain) { c.ID = 56 })
 	rs := byKey(fx.eng.RunOnce(context.Background()))
 	if r := rs["FW-RPC-003|ethereum|"]; r.Status != checks.Critical || !strings.Contains(r.Summary, "b") {
 		t.Fatalf("wrong chain: %+v", r)
@@ -177,10 +178,10 @@ func TestWrongChainEndpointIsDisabled(t *testing.T) {
 func TestBlindMonitorAndStalledChain(t *testing.T) {
 	fx := newFixture(t, nil)
 	for _, c := range fx.chains["ethereum"] {
-		c.set(func() { c.fail = true })
+		c.Set(func(*fakerpc.Chain) { c.Fail = true })
 	}
 	for _, c := range fx.chains["arbitrum"] {
-		c.set(func() { c.headAt = now0.Add(-time.Hour) })
+		c.Set(func(*fakerpc.Chain) { c.HeadAt = now0.Add(-time.Hour) })
 	}
 	var rs map[string]checks.Result
 	for i := 0; i < 3; i++ {
@@ -205,10 +206,10 @@ func TestAggregatorChangeIsReportedAndBoundsReread(t *testing.T) {
 	fx.eng.RunOnce(context.Background())
 	newAgg := "0x54bCC589d9743E521c64233706FC8cB36D275b07"
 	for _, c := range fx.chains["ethereum"] {
-		c.set(func() {
-			f := c.feeds[common.HexToAddress(ethProxy)]
-			f.aggregator, f.phase = common.HexToAddress(newAgg), 8
-			f.max = big.NewInt(244400000000) // tight bound on the new aggregator: 0.0149% away
+		c.Set(func(*fakerpc.Chain) {
+			f := c.Feeds[common.HexToAddress(ethProxy)]
+			f.Aggregator, f.Phase = common.HexToAddress(newAgg), 8
+			f.Max = big.NewInt(244400000000) // tight bound on the new aggregator: 0.0149% away
 		})
 	}
 	// Metadata is refreshed every metadata_refresh (10) cycles.
@@ -254,10 +255,13 @@ func TestRunConcurrentSlowRPCAndShutdown(t *testing.T) {
 		nw.net.Clock = clock.Real{}
 	}
 	for _, c := range fx.chains["ethereum"] {
-		c.set(func() { c.headAt = time.Now(); c.feeds[common.HexToAddress(ethProxy)].answer = big.NewInt(0) }) // invalid -> critical
+		c.Set(func(*fakerpc.Chain) {
+			c.HeadAt = time.Now()
+			c.Feeds[common.HexToAddress(ethProxy)].Answer = big.NewInt(0)
+		}) // invalid -> critical
 	}
 	for _, c := range fx.chains["arbitrum"] {
-		c.set(func() { c.headAt = time.Now(); c.delay = 300 * time.Millisecond })
+		c.Set(func(*fakerpc.Chain) { c.HeadAt = time.Now(); c.Delay = 300 * time.Millisecond })
 	}
 
 	dctx, dcancel := context.WithCancel(context.Background())
