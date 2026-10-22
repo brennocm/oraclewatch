@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"math/big"
 	"net/http"
@@ -70,5 +71,25 @@ func TestNotReady(t *testing.T) {
 	s := New(Options{Listen: "127.0.0.1:0", Registry: metrics.New().Registry, Source: fakeSource{ready: false}})
 	if rec := get(t, s.Handler(), "/readyz"); rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("readyz: %d", rec.Code)
+	}
+}
+
+func TestListenAndServeShutsDown(t *testing.T) {
+	s := New(Options{Listen: "127.0.0.1:0", Registry: metrics.New().Registry, Source: fakeSource{ready: true}})
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- s.ListenAndServe(ctx) }()
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("shutdown: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("server did not shut down")
+	}
+	if err := New(Options{Listen: "256.0.0.1:1", Registry: metrics.New().Registry, Source: fakeSource{}}).ListenAndServe(context.Background()); err == nil {
+		t.Fatal("invalid listen address must fail")
 	}
 }

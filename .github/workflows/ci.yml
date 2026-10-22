@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      fork:
+        description: Run the Anvil mainnet-fork tests (needs the MAINNET_RPC_URL secret)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -39,6 +45,8 @@ jobs:
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -n 1
+      - name: Coverage floor (80% on core packages)
+        run: scripts/check-coverage.sh 80
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
@@ -56,6 +64,27 @@ jobs:
           go-version-file: go.mod
       - name: Integration tests (go-ethereum simulated backend)
         run: go test -race -tags integration ./...
+
+  fork:
+    if: github.event_name == 'workflow_dispatch' && inputs.fork
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install anvil (Foundry v1.8.5, checksum pinned)
+        run: |
+          curl -sSfL -o foundry.tgz https://github.com/foundry-rs/foundry/releases/download/v1.8.5/foundry_v1.8.5_linux_amd64.tar.gz
+          echo "6c66ffcc55fa4249197721baa3098bc208014ea1d8aa04b2ed50ac6bccffb226  foundry.tgz" | sha256sum -c
+          mkdir -p "$HOME/.local/bin" && tar xzf foundry.tgz -C "$HOME/.local/bin" anvil
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Fork tests
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+        run: go test -tags fork -count=1 ./internal/feeds/...
 
   govulncheck:
     runs-on: ubuntu-latest
