@@ -1,0 +1,67 @@
+#cloud-config
+# Cloud-init for an Oracle Cloud Always Free Ampere A1 instance (arm64) running
+# Canonical Ubuntu 24.04. See docs/DEPLOYMENT.md.
+#
+# It installs Docker and unattended upgrades, hardens SSH (keys only, no root),
+# opens 80/443 in the host firewall (OCI images ship an iptables policy that
+# rejects everything except SSH), and creates an unprivileged "oraclewatch"
+# user that owns /opt/oraclewatch. It does NOT fetch secrets: you copy .env
+# over SSH after boot.
+
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - unattended-upgrades
+  - iptables-persistent
+  - git
+  - jq
+
+users:
+  - default
+  - name: oraclewatch
+    shell: /usr/sbin/nologin
+    system: true
+    # Membership of the docker group is root-equivalent on the host. It is
+    # granted to this service account only; humans log in as the default
+    # user with an SSH key and use sudo.
+    groups: [docker]
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/60-oraclewatch-hardening.conf
+    permissions: "0644"
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+      X11Forwarding no
+      AllowAgentForwarding no
+      AllowTcpForwarding no
+      MaxAuthTries 3
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    permissions: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+  - path: /etc/docker/daemon.json
+    permissions: "0644"
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {"max-size": "10m", "max-file": "3"},
+        "no-new-privileges": true,
+        "live-restore": true
+      }
+
+runcmd:
+  # Host firewall: allow HTTP/HTTPS before the image's final REJECT rule.
+  # SSH stays as the image configured it; restrict it to your IP in the OCI
+  # security list / NSG (see docs/DEPLOYMENT.md).
+  - iptables -I INPUT 5 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+  - iptables -I INPUT 5 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+  - iptables -I INPUT 5 -p udp --dport 443 -j ACCEPT
+  - netfilter-persistent save
+  - systemctl restart ssh
+  - systemctl enable --now docker
+  - install -d -o oraclewatch -g oraclewatch -m 0750 /opt/oraclewatch
