@@ -91,6 +91,26 @@ Other commands: `oraclewatch run` (daemon), `validate-config [--online]`, `feeds
 `version`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for an Oracle Cloud Always Free
 deployment on arm64.
 
+## Verifying a release
+
+Releases are built by GoReleaser in GitHub Actions. The checksum file and the container
+image are signed keylessly with cosign, archives ship with SPDX SBOMs, and archives and
+image carry SLSA build provenance:
+
+```sh
+cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json \
+  --certificate-identity 'https://github.com/brennocm/oraclewatch/.github/workflows/release.yml@refs/tags/v0.1.0' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum --ignore-missing -c checksums.txt
+
+cosign verify ghcr.io/brennocm/oraclewatch:v0.1.0 \
+  --certificate-identity 'https://github.com/brennocm/oraclewatch/.github/workflows/release.yml@refs/tags/v0.1.0' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+gh attestation verify oci://ghcr.io/brennocm/oraclewatch:v0.1.0 --owner brennocm
+```
+
+Then run the image by digest, not by tag ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#4-verifying-and-updating-the-image)).
+
 ## What is monitored
 
 [`configs/example.yaml`](configs/example.yaml) monitors ETH/USD, BTC/USD and USDC/USD on
