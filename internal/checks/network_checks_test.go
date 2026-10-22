@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -36,6 +37,14 @@ func TestChainHead(t *testing.T) {
 	in.SnapshotErr = chain.ErrChainStalled
 	if got := (ChainHead{}).Evaluate(in); got.Status != Critical {
 		t.Fatalf("stalled: %s", got.Status)
+	}
+	// Every endpoint failing is not "heads are current".
+	in.SnapshotErr = chain.ErrNoHealthyEndpoint
+	for i := range in.Snapshot.Heads {
+		in.Snapshot.Heads[i].Err = errors.New("connection refused")
+	}
+	if got := (ChainHead{}).Evaluate(in); got.Status != Unknown {
+		t.Fatalf("no heads: %s (%s)", got.Status, got.Summary)
 	}
 }
 
