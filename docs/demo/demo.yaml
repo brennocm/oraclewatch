@@ -1,0 +1,21 @@
+# Small configuration used to record docs/images/check.gif (see check.tape).
+# Public RPC endpoints, no secrets. Addresses from configs/feeds/.
+networks:
+  - name: ethereum
+    chain_id: 1
+    rpc_endpoints:
+      - {name: publicnode, url: "${DEMO_ETH_RPC_A}"}
+      - {name: drpc, url: "${DEMO_ETH_RPC_B}"}
+    confirmations: 2
+  - name: arbitrum
+    chain_id: 42161
+    l2: true
+    rpc_endpoints:
+      - {name: publicnode, url: "${DEMO_ARB_RPC_A}"}
+      - {name: arbitrum, url: "${DEMO_ARB_RPC_B}"}
+    confirmations: 10
+    sequencer: {proxy: "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"}
+feeds:
+  - {name: ETH/USD, network: ethereum, proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", expected_decimals: 8, expected_description: "ETH / USD", heartbeat: 3600s, deviation_threshold: 0.5%, reference: {pair: ETH-USD}}
+  - {name: ETH/USD, network: arbitrum, proxy: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", expected_decimals: 8, expected_description: "ETH / USD", heartbeat: 1755s, deviation_threshold: 0.05%, reference: {pair: ETH-USD}}
+log: {level: error}
