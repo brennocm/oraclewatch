@@ -9,6 +9,8 @@ package chain
 
 import (
 	"context"
+	"errors"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -42,6 +44,50 @@ const UserAgent = "oraclewatch (+https://github.com/brennocm/oraclewatch)"
 // of requests per endpoint.
 const maxIdleConnsPerHost = 4
 
+// MaxResponseSize bounds a JSON-RPC response body. The go-ethereum client
+// does not limit what it reads, so a malicious endpoint could otherwise send
+// an arbitrarily large body. The responses oraclewatch asks for (a header, a
+// few ABI words) are a few KiB.
+const MaxResponseSize = 4 << 20
+
+// limitedTransport caps every response body at max bytes; reading past the
+// cap returns an error instead of more data.
+type limitedTransport struct {
+	next http.RoundTripper
+	max  int64
+}
+
+func (t limitedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.next.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body = &limitedBody{rc: resp.Body, left: t.max}
+	return resp, nil
+}
+
+type limitedBody struct {
+	rc   io.ReadCloser
+	left int64
+}
+
+// errResponseTooLarge is returned when a response exceeds MaxResponseSize.
+var errResponseTooLarge = errors.New("JSON-RPC response exceeds the size limit")
+
+func (b *limitedBody) Read(p []byte) (int, error) {
+	if b.left <= 0 {
+		return 0, errResponseTooLarge
+	}
+	if int64(len(p)) > b.left {
+		p = p[:b.left]
+	}
+	n, err := b.rc.Read(p)
+	b.left -= int64(n)
+	return n, err
+}
+
+func (b *limitedBody) Close() error { return b.rc.Close() }
+
 // DialHTTP returns a Backend for an HTTP(S) JSON-RPC URL. No connection is made
 // until the first request. Per-call deadlines come from the context; the
 // transport timeouts below bound the phases a context deadline cannot see
@@ -57,7 +103,7 @@ func DialHTTP(ctx context.Context, rawURL string) (Backend, error) {
 		ForceAttemptHTTP2:     true,
 	}
 	client, err := rpc.DialOptions(ctx, rawURL,
-		rpc.WithHTTPClient(&http.Client{Transport: transport}),
+		rpc.WithHTTPClient(&http.Client{Transport: limitedTransport{next: transport, max: MaxResponseSize}}),
 		rpc.WithHeader("User-Agent", UserAgent),
 	)
 	if err != nil {
