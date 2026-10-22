@@ -87,3 +87,7 @@ func unpackRound(method string, data []byte) (Round, error) {
 func unpackAddress(a abi.ABI, method string, data []byte) (common.Address, error) {
 	return unpackOne[common.Address](a, method, data)
 }
+
+// ABIs returns the embedded ABIs (AggregatorV3Interface, AggregatorProxy,
+// AggregatorBounds), for test doubles that must answer them.
+func ABIs() []abi.ABI { return []abi.ABI{aggregatorV3ABI, proxyABI, boundsABI} }

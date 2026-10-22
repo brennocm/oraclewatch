@@ -125,6 +125,9 @@ func (e *Engine) cycle(ctx context.Context, ns *networkState) []checks.Result {
 		ns.refFailed++
 	}
 	nin.FailedCycles, nin.ReferenceFailedCycles = ns.failed, ns.refFailed
+	if e.once {
+		nin.BlindAfter = 1
+	}
 	for _, c := range checks.NetworkChecks() {
 		results = append(results, c.Evaluate(nin))
 	}
