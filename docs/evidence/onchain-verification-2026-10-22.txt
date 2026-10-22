@@ -1,0 +1,229 @@
+# Raw output of the Phase 0 on-chain verification (scratch Go program using go-ethereum v1.17.9).
+# RPCs: ethereum: ethereum-rpc.publicnode.com + eth.drpc.org; arbitrum: arbitrum-one-rpc.publicnode.com + arb1.arbitrum.io;
+#       base: base-rpc.publicnode.com + mainnet.base.org; optimism: optimism-rpc.publicnode.com + mainnet.optimism.io
+# Each network: pinned block = min(head of both RPCs) - 5; every call made with that block number on both RPCs.
+
+selector decimals         0x313ce567
+selector description      0x7284e416
+selector version          0x54fd4d50
+selector aggregator       0x245a7bfc
+selector phaseId          0x58303b10
+selector typeAndVersion   0x181f5a77
+selector minAnswer        0x22adbc78
+selector maxAnswer        0x70da2f67
+selector latestRoundData  0xfeaf968c
+network base chainId=8453 pinnedBlock=52924574 blockTime=2026-10-22T03:08:15Z
+network optimism chainId=10 pinnedBlock=158519860 blockTime=2026-10-22T03:08:17Z
+network ethereum chainId=1 pinnedBlock=26245361 blockTime=2026-10-22T03:07:23Z
+network arbitrum chainId=42161 pinnedBlock=517104692 blockTime=2026-10-22T03:08:27Z
+
+## ethereum ETH / USD (eth-usd) proxy=0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 checksumOK=true
+  description: [ETH / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [7]
+  latestRoundData: [129127208515966896195 244363658508 1792635525 1792635539 129127208515966896195]
+  rpcAgree: true
+
+## arbitrum ETH / USD (eth-usd) proxy=0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612 checksumOK=true
+  description: [ETH / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0xD827123D014578C965F6c9d87A641ec05FaA5501]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [2]
+  latestRoundData: [36893488147419244286 243926367151 1792638476 1792638488 36893488147419244286]
+  rpcAgree: true
+
+## optimism ETH / USD (eth-usd) proxy=0x13e3Ee699D1909E989722E753853AE30b17e08c5 checksumOK=true
+  description: [ETH / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0x16C04812FA9dB1D0236c3841dDA8E86225BC3f3e]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [2]
+  latestRoundData: [36893488147419122050 244108361231 1792638040 1792638043 36893488147419122050]
+  rpcAgree: true
+
+## ethereum BTC / USD (btc-usd) proxy=0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c checksumOK=true
+  description: [BTC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0x4a3411ac2948B33c69666B35cc6d055B27Ea84f1]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [7]
+  latestRoundData: [129127208515966886643 8272975100000 1792636096 1792636115 129127208515966886643]
+  rpcAgree: true
+
+## arbitrum BTC / USD (btc-usd) proxy=0x6ce185860a4963106506C203335A2910413708e9 checksumOK=true
+  description: [BTC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0xA8c2ad8Fc02733d758C0585478cdf6C53d6c9cB8]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [2]
+  latestRoundData: [36893488147419193241 8279689632971 1792638463 1792638475 36893488147419193241]
+  rpcAgree: true
+
+## optimism BTC / USD (btc-usd) proxy=0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593 checksumOK=true
+  description: [BTC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0xF012C39384440e1DaA0E11136F6f3Ff384dcBF9f]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [2]
+  latestRoundData: [36893488147419124983 8279307393210 1792638463 1792638465 36893488147419124983]
+  rpcAgree: true
+
+## ethereum USDC / USD (usdc-usd) proxy=0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6 checksumOK=true
+  description: [USDC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0x54bCC589d9743E521c64233706FC8cB36D275b07]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [105000000]
+  phaseId: [4]
+  latestRoundData: [73786976294838206504 99981853 1792633445 1792633463 73786976294838206504]
+  rpcAgree: true
+
+## arbitrum USDC / USD (usdc-usd) proxy=0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3 checksumOK=true
+  description: [USDC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0xb10cb22245D54f58C66eE65353FaB5D94ca21A1C]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [105000000]
+  phaseId: [3]
+  latestRoundData: [55340232221128674776 99983000 1792638395 1792638407 55340232221128674776]
+  rpcAgree: true
+
+## optimism USDC / USD (usdc-usd) proxy=0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3 checksumOK=true
+  description: [USDC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0xdb5a1d830b72ce47B881C0093dBC9C6321091e78]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [105000000]
+  phaseId: [3]
+  latestRoundData: [55340232221128654928 99983901 1792611633 1792611647 55340232221128654928]
+  rpcAgree: true
+
+## base ETH / USD (eth-usd-shared-svr-2) proxy=0x50015f8b17fb2C290Dde41fDc246ed0dcEE93a8b checksumOK=true
+  description: [ETH / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0x05c84a58FE042275b37db038bAAcD15F410c7bB0]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [DualAggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [1]
+  latestRoundData: [18446744073709561001 244231314782 1792638060 1792638075 18446744073709561001]
+  rpcAgree: true
+
+## base BTC / USD (btc-usd-shared-svr-2) proxy=0xC01502b887D09B0f329981764268fC32a94cB453 checksumOK=true
+  description: [BTC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0xe5ec87a39445b8D5b751b116802A53C5ae7e9Df1]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [DualAggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [95780971304118053647396689196894323976171195136475135]
+  phaseId: [1]
+  latestRoundData: [18446744073709562537 8282484130363 1792638283 1792638297 18446744073709562537]
+  rpcAgree: true
+
+## base USDC / USD (usdc-usd) proxy=0x7e860098F58bBFC8648a4311b374B1D669a2bc6B checksumOK=true
+  description: [USDC / USD]
+  decimals: [8]
+  version: [6]
+  aggregator: [0x68bE4C50235205Ede361ac8244B1ee221CDDA5E2]
+  aggregatorMatchesDocs: true
+  agg.typeAndVersion: [AccessControlledOCR2Aggregator 1.0.0]
+  agg.minAnswer: [1]
+  agg.maxAnswer: [105000000]
+  phaseId: [3]
+  latestRoundData: [55340232221128654911 99984864 1792587107 1792587121 55340232221128654911]
+  rpcAgree: true
+
+## arbitrum 0xFdB631F5EE196F0ed6FAa767959853A9F217697D L2 Sequencer Uptime (l2-sequencer-uptime-status-feed) proxy=0x0000000000000000000000000000000000000000 checksumOK=false
+  rpcAgree: true
+
+## base 0xBCF85224fc0756B9Fa45aA7892530B47e10b6433 L2 Sequencer Uptime (l2-sequencer-uptime-status-feed) proxy=0x0000000000000000000000000000000000000000 checksumOK=false
+  rpcAgree: true
+
+## optimism 0x371EAD81c9102C9BF4874A9075FFFf170F2Ee389 L2 Sequencer Uptime (l2-sequencer-uptime-status-feed) proxy=0x0000000000000000000000000000000000000000 checksumOK=false
+  rpcAgree: true
+2026-10-22T03:09:05Z
+
+# --- L2 sequencer uptime feeds (separate run) ---
+network ethereum chainId=1 pinnedBlock=26245365 blockTime=2026-10-22T03:08:11Z
+network arbitrum chainId=42161 pinnedBlock=517104872 blockTime=2026-10-22T03:09:19Z
+network base chainId=8453 pinnedBlock=52924602 blockTime=2026-10-22T03:09:11Z
+network optimism chainId=10 pinnedBlock=158519888 blockTime=2026-10-22T03:09:13Z
+
+## arbitrum L2 Sequencer Uptime (seq) proxy=0xFdB631F5EE196F0ed6FAa767959853A9F217697D checksumOK=true
+  description: [L2 Sequencer Uptime Status Feed]
+  decimals: [0]
+  version: [1]
+  aggregator: [0xC1303BBBaf172C55848D3Cb91606d8E27FF38428]
+  aggregatorMatchesDocs: false
+  agg.typeAndVersion: [ArbitrumSequencerUptimeFeed 1.0.0]
+  agg.minAnswer: ERR execution reverted
+  agg.maxAnswer: ERR execution reverted
+  phaseId: [1]
+  latestRoundData: [18446744073709551657 0 1779307607 1779307607 18446744073709551657]
+  rpcAgree: true
+
+## base L2 Sequencer Uptime (seq) proxy=0xBCF85224fc0756B9Fa45aA7892530B47e10b6433 checksumOK=true
+  description: [L2 Sequencer Uptime Status Feed]
+  decimals: [0]
+  version: [1]
+  aggregator: [0x606c6ecBD272E2174F6710b5974F23fE9899602e]
+  aggregatorMatchesDocs: false
+  agg.typeAndVersion: [OptimismSequencerUptimeFeed 1.0.0]
+  agg.minAnswer: ERR execution reverted
+  agg.maxAnswer: ERR execution reverted
+  phaseId: [1]
+  latestRoundData: [18446744073709551636 0 1782491507 1792603111 18446744073709551636]
+  rpcAgree: true
+
+## optimism L2 Sequencer Uptime (seq) proxy=0x371EAD81c9102C9BF4874A9075FFFf170F2Ee389 checksumOK=true
+  description: [L2 Sequencer Uptime Status Feed]
+  decimals: [0]
+  version: [1]
+  aggregator: [0x58218ea7422255EBE94e56b504035a784b7AA204]
+  aggregatorMatchesDocs: false
+  agg.typeAndVersion: [OptimismSequencerUptimeFeed 1.0.0]
+  agg.minAnswer: ERR execution reverted
+  agg.maxAnswer: ERR execution reverted
+  phaseId: [1]
+  latestRoundData: [18446744073709551664 0 1783448495 1792609303 18446744073709551664]
+  rpcAgree: true

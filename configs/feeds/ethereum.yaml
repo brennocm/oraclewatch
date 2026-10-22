@@ -1,0 +1,60 @@
+# Verified Chainlink Data Feed proxies on ethereum (chain id 1).
+#
+# Source page:  https://docs.chain.link/data-feeds/price-feeds/addresses?network=ethereum&page=1
+# Data file:    https://reference-data-directory.vercel.app/feeds-mainnet.json
+#               (the JSON file the official addresses page loads; retrieved 2026-10-22)
+#
+# On-chain verification: 2026-10-22, pinned block 26245361 (2026-10-22T03:07:23Z), read through
+# two independent RPC endpoints at the same block; both returned identical results.
+# description(), decimals(), version() and aggregator() were checked against the
+# data file. heartbeat/deviation_threshold are copied from the data file and are NOT
+# verifiable on-chain; they are off-chain operating parameters.
+# See docs/research.md#4-on-chain-verification. Never edit addresses by hand.
+network: ethereum
+chain_id: 1
+feeds:
+  - name: ETH/USD
+    proxy: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+    description: "ETH / USD"
+    decimals: 8
+    heartbeat: 3600s
+    deviation_threshold: 0.5%
+    market_risk: low
+    docs_path: eth-usd
+    verified:
+      aggregator: "0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5"
+      aggregator_type: "AccessControlledOCR2Aggregator 1.0.0"
+      version: 6
+      phase_id: 7
+      min_answer: "1"
+      max_answer: "95780971304118053647396689196894323976171195136475135"
+  - name: BTC/USD
+    proxy: "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
+    description: "BTC / USD"
+    decimals: 8
+    heartbeat: 3600s
+    deviation_threshold: 0.5%
+    market_risk: low
+    docs_path: btc-usd
+    verified:
+      aggregator: "0x4a3411ac2948B33c69666B35cc6d055B27Ea84f1"
+      aggregator_type: "AccessControlledOCR2Aggregator 1.0.0"
+      version: 6
+      phase_id: 7
+      min_answer: "1"
+      max_answer: "95780971304118053647396689196894323976171195136475135"
+  - name: USDC/USD
+    proxy: "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6"
+    description: "USDC / USD"
+    decimals: 8
+    heartbeat: 82800s
+    deviation_threshold: 0.25%
+    market_risk: low
+    docs_path: usdc-usd
+    verified:
+      aggregator: "0x54bCC589d9743E521c64233706FC8cB36D275b07"
+      aggregator_type: "AccessControlledOCR2Aggregator 1.0.0"
+      version: 6
+      phase_id: 4
+      min_answer: "1"
+      max_answer: "105000000"
